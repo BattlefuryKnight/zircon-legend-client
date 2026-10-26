@@ -313,7 +313,6 @@ namespace Client.Scenes.Views
                     if (Config.自动铁布衫 && GameScene.Game.User.Buffs.All(x => x.Type != BuffType.Defiance))
                     {
                         GameScene.Game.UseMagic(MagicType.Defiance);
-                        return;
                     }
 
                     if (Config.自动金刚之躯 && GameScene.Game.User.Buffs.All(x => x.Type != BuffType.Endurance))
@@ -322,7 +321,6 @@ namespace Client.Scenes.Views
                         if (clientMagic != null && clientMagic.NextCast < CEnvir.Now)
                         {
                             GameScene.Game.UseMagic(clientMagic);
-                            return;
                         }
                     }
 
@@ -332,7 +330,6 @@ namespace Client.Scenes.Views
                         if (GameScene.Game.User.CurrentHP > GameScene.Game.User.Stats[Stat.Health] * 0.8)
                         {
                             GameScene.Game.UseMagic(MagicType.Might);
-                            return;
                         }
                     }
 
@@ -342,34 +339,32 @@ namespace Client.Scenes.Views
                         if (clientMagic != null && clientMagic.NextCast < CEnvir.Now)
                         {
                             GameScene.Game.UseMagic(clientMagic);
-                            return;
                         }
                     }
 
-                    // 修改：自动莲月、自动烈火、自动翔空、自动快刀斩马、自动天雷锤只在战斗状态下执行
+                    // 自动莲月、自动烈火、自动翔空：充能型技能自动充能（充能后下一次攻击自动释放），不再限制战斗状态
+                    if (Config.自动莲月 && BladeStorm != null && CEnvir.Now > BladeStorm.NextCast && !GameScene.Game.User.CanBladeStorm)
+                        GameScene.Game.UseMagic(MagicType.BladeStorm);
+                    else if (Config.自动烈火 && FlamingSword != null && CEnvir.Now > FlamingSword.NextCast && !GameScene.Game.User.CanFlamingSword)
+                        GameScene.Game.UseMagic(MagicType.FlamingSword);
+                    else if (Config.自动翔空 && DragonRise != null && CEnvir.Now > DragonRise.NextCast && !GameScene.Game.User.CanDragonRise)
+                        GameScene.Game.UseMagic(MagicType.DragonRise);
+
+                    // 快刀斩马、天雷锤：直接攻击型技能，需在战斗状态且有目标
                     if (IsInCombat())
                     {
-                        if (Config.自动莲月 && BladeStorm != null && CEnvir.Now > BladeStorm.NextCast)
-                            GameScene.Game.UseMagic(MagicType.BladeStorm);
-                        else if (Config.自动烈火 && FlamingSword != null && CEnvir.Now > FlamingSword.NextCast)
-                            GameScene.Game.UseMagic(MagicType.FlamingSword);
-                        else if (Config.自动翔空 && DragonRise != null && CEnvir.Now > DragonRise.NextCast)
-                            GameScene.Game.UseMagic(MagicType.DragonRise);
-                        else if (Config.自动快刀斩马 && SwiftBlade != null && CEnvir.Now > SwiftBlade.NextCast)
+                        if (Config.自动快刀斩马 && SwiftBlade != null && CEnvir.Now > SwiftBlade.NextCast)
                         {
-                            // 快刀斩马：只有在有目标时才释放
                             if (HasCurrentTarget() != null)
                                 GameScene.Game.UseMagic(MagicType.SwiftBlade);
                         }
                         else if (Config.自动天雷锤 && SeismicSlam != null && CEnvir.Now > SeismicSlam.NextCast)
-                        {   
-                            // 天雷锤：如果有近距离目标，向目标方向释放；否则向鼠标方向释放
+                        {
                             int? targetDistance = HasCurrentTarget();
                             if (targetDistance != null && targetDistance < 4)
                             {
-                                // 有近距离目标，向目标方向释放
-                                var target = MapObject.TargetObject != null && GameScene.Game.CanAttackTarget(MapObject.TargetObject) 
-                                    ? MapObject.TargetObject 
+                                var target = MapObject.TargetObject != null && GameScene.Game.CanAttackTarget(MapObject.TargetObject)
+                                    ? MapObject.TargetObject
                                     : GameScene.Game.MouseObject;
                                 GameScene.Game.UseMagic(MagicType.SeismicSlam, target);
                             }
