@@ -532,7 +532,7 @@ namespace Client.Models
                         }
                     }
 
-                    if (CanThrusting && attackMagic != MagicType.Slaying && attackMagic != MagicType.HalfMoon)
+                    if (CanThrusting && attackMagic == MagicType.None)
                     {
                         foreach (KeyValuePair<MagicInfo, ClientUserMagic> pair in Magics)
                         {
