@@ -1527,6 +1527,9 @@ namespace Client.Scenes
                     case KeyBindAction.ChangeChatMode:
                         ChatTextBox.ChatModeButton.InvokeMouseClick();
                         break;
+                    case KeyBindAction.ToggleItemNames:
+                        Config.ShowItemNames = !Config.ShowItemNames;
+                        break;
                     case KeyBindAction.ItemPickUp:
                         if (Observer) continue;
 

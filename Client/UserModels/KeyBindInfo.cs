@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -244,6 +244,8 @@ namespace Client.UserModels
         AutoRunToggle,
         [Description("切换聊天模式")]
         ChangeChatMode,
+        [Description("切换物品名称显示")]
+        ToggleItemNames,
 
 
         [Description("使用腰带栏道具 1")]

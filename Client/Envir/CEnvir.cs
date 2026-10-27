@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Drawing;
@@ -690,6 +690,10 @@ namespace Client.Envir
                 case KeyBindAction.ChangeChatMode:
                     bind.Category = "功能";
                     bind.Key1 = Keys.K;
+                    break;
+                case KeyBindAction.ToggleItemNames:
+                    bind.Category = "功能";
+                    bind.Key1 = Keys.N;
                     break;
                 case KeyBindAction.ItemPickUp:
                     bind.Category = "物品";

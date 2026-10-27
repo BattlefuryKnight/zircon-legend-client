@@ -48,115 +48,31 @@ namespace Client.Models
 
 
 
+            // 地面掉落物名称颜色统一为物品稀有度颜色（装备碎片保持原有特殊颜色）；取消地面光柱效果
             switch (Item.Rarity)
             {
                 case Rarity.Common:
-                    if (Item.AddedStats.Values.Count > 0 && Item.Info.Effect != ItemEffect.ItemPart)
-                    {
-                        NameColour = Color.LightSkyBlue; // 稍带蓝色的极浅天蓝
-
-                        Effects.Add(new MirEffect(110, 10, TimeSpan.FromMilliseconds(100), LibraryFile.ProgUse, 60, 60, Color.LightSkyBlue)
-                        {
-                            Target = this,
-                            Loop = true,
-                            Blend = true,
-                            BlendRate = 0.2F,
-                        });
-                    }
-                    else if (Item.Info.Effect == ItemEffect.ItemPart) // 碎片设置暗灰色
+                    if (Item.Info.Effect == ItemEffect.ItemPart)
                         NameColour = Color.DarkGray;
                     else
-                        NameColour = Color.Gainsboro;
+                        NameColour = ClientUserItem.GetRarityColour(Item.Rarity);
                     break;
                 case Rarity.Superior:
-                    if (Item.AddedStats.Values.Count > 0 && Item.Info.Effect != ItemEffect.ItemPart)
-                    {
-                        NameColour = Color.Lime; // 亮绿色 RGB(0,255,0)
-                        Effects.Add(new MirEffect(100, 10, TimeSpan.FromMilliseconds(100), LibraryFile.ProgUse, 60, 60, Color.Lime)
-                        {
-                            Target = this,
-                            Loop = true,
-                            Blend = true,
-                            BlendRate = 0.4F,
-                        });
-                    }
-                    else if (Item.Info.Effect == ItemEffect.ItemPart) // 碎片设置灰绿色
-                    {
-                        NameColour = Color.DarkSeaGreen; // 更浅的灰绿色
-                    }
+                    if (Item.Info.Effect == ItemEffect.ItemPart)
+                        NameColour = Color.DarkSeaGreen;
                     else
-                    {
-                        NameColour = Color.LightGreen; // 亮浅绿
-                        Effects.Add(new MirEffect(100, 10, TimeSpan.FromMilliseconds(100), LibraryFile.ProgUse, 60, 60, Color.LightGreen)
-                        {
-                            Target = this,
-                            Loop = true,
-                            Blend = true,
-                            BlendRate = 0.2F,
-                        });
-                    }
+                        NameColour = ClientUserItem.GetRarityColour(Item.Rarity);
                     break;
                 case Rarity.Elite:
-                    if (Item.AddedStats.Values.Count > 0 && Item.Info.Effect != ItemEffect.ItemPart)
-                    {
-                        NameColour = Color.Magenta; // 稀有物品有额外属性时：紫红
-
-                        Effects.Add(new MirEffect(120, 10, TimeSpan.FromMilliseconds(100), LibraryFile.ProgUse, 60, 60, Color.Magenta)
-                        {
-                            Target = this,
-                            Loop = true,
-                            Blend = true,
-                            BlendRate = 0.4F,
-                        });
-                    }
-                    else if (Item.Info.Effect == ItemEffect.ItemPart) 
-                    {
-                        NameColour = Color.MediumOrchid; // 灰色粉紫色碎片
-                    }
-                    else
-                    {
-                        NameColour = Color.Violet; // 亮浅紫
-                        Effects.Add(new MirEffect(120, 10, TimeSpan.FromMilliseconds(100), LibraryFile.ProgUse, 60, 60, Color.Violet)
-                        {
-                            Target = this,
-                            Loop = true,
-                            Blend = true,
-                            BlendRate = 0.2F,
-                        });
-                    }
-                    break;
-                            case Rarity.Famous:
+                case Rarity.Famous:
                 case Rarity.Divine:
                 case Rarity.Heavenly:
-                    Color rareColour = ClientUserItem.GetRarityColour(Item.Rarity);
-
-                    if (Item.AddedStats.Values.Count > 0 && Item.Info.Effect != ItemEffect.ItemPart)
-                    {
-                        NameColour = rareColour;
-                        Effects.Add(new MirEffect(120, 10, TimeSpan.FromMilliseconds(100), LibraryFile.ProgUse, 60, 60, rareColour)
-                        {
-                            Target = this,
-                            Loop = true,
-                            Blend = true,
-                            BlendRate = 0.4F,
-                        });
-                    }
-                    else if (Item.Info.Effect == ItemEffect.ItemPart)
-                    {
+                    if (Item.Info.Effect == ItemEffect.ItemPart)
                         NameColour = Color.MediumOrchid;
-                    }
                     else
-                    {
-                        NameColour = rareColour;
-                        Effects.Add(new MirEffect(120, 10, TimeSpan.FromMilliseconds(100), LibraryFile.ProgUse, 60, 60, rareColour)
-                        {
-                            Target = this,
-                            Loop = true,
-                            Blend = true,
-                            BlendRate = 0.2F,
-                        });
-                    }
-                    break;            }
+                        NameColour = ClientUserItem.GetRarityColour(Item.Rarity);
+                    break;
+            }
 
             FilterSet = GameScene.Game?.BigPatchBox?.GetFilterItem(itemInfo.Index);
             if (FilterSet != null)
