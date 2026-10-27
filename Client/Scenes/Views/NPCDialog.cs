@@ -1,4 +1,4 @@
-﻿
+
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -6629,7 +6629,7 @@ namespace Client.Scenes.Views
 
                 if (TemplateCell.Grid[0].Item != null && TemplateCell.Grid[0].Item.Info.Effect != ItemEffect.WeaponTemplate)
                 {
-                    switch (TemplateCell.Grid[0].Item.Info.Rarity)
+                    switch (TemplateCell.Grid[0].Item.Rarity)
                     {
                         case Rarity.Common:
                             cost = Globals.CommonCraftWeaponPercentCost;
@@ -7056,7 +7056,7 @@ namespace Client.Scenes.Views
                         if (bestCube == null ||
                             item.Info.RequiredAmount > bestCube.Info.RequiredAmount ||
                             (item.Info.RequiredAmount == bestCube.Info.RequiredAmount &&
-                             item.Info.Rarity > bestCube.Info.Rarity))
+                             item.Rarity > bestCube.Rarity))
                         {
                             bestCube = item;
                             bestSlot = i;

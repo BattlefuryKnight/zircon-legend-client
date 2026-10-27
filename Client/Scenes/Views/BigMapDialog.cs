@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
@@ -163,8 +163,7 @@ namespace Client.Scenes.Views
             Image.MouseMove += Image_MouseMove;
             Image.MouseLeave += Image_MouseLeave;
         }
-
-        private void Image_MouseClick(object sender, MouseEventArgs e)
+private void Image_MouseClick(object sender, MouseEventArgs e)
         {
 
             //if (SelectedInfo != GameScene.Game.MapControl.MapInfo) return;

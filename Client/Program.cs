@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
@@ -32,6 +32,9 @@ namespace Client
 
 
             ConfigReader.Load();
+            // 分辨率合法性校验：已废弃或无效的分辨率（如 800x600）回退到最小支持分辨率
+            if (!Globals.ValidResolutions.Contains(Config.GameSize))
+                Config.GameSize = Globals.ValidResolutions[0];
 
             CEnvir.SaveError($"命令行：{string.Join(" ", args)}");
 

@@ -995,7 +995,7 @@ namespace Client.Models
         }
         private void DrawWeaponEffect()
         {
-            if (GameScene.Game?.CharacterBox?.Grid[(int)EquipmentSlot.Weapon]?.Item?.Info?.Rarity == Rarity.Elite 
+            if (GameScene.Game?.CharacterBox?.Grid[(int)EquipmentSlot.Weapon]?.Item?.Rarity == Rarity.Elite 
                 && CEnvir.LibraryList.TryGetValue(LibraryFile.EquipEffect_Full, out var effectLibrary))
             {
                 switch (WeaponShape)

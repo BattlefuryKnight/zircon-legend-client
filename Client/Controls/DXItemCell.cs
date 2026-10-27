@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
@@ -1266,7 +1266,7 @@ namespace Client.Controls
 
                     if ((Item.Flags & UserItemFlags.Refinable) == UserItemFlags.Refinable) return false;
 
-                    if (Item.Level >= (Globals.AccessoryExperienceList.Count - (2 - (int)Item.Info.Rarity) * 2)) return false;
+                    if (Item.Level >= (Globals.AccessoryExperienceList.Count - (2 - (int)Item.Rarity) * 2)) return false;
 
                     break;
                 case GridType.AccessoryRefineLevelItems:
@@ -1306,7 +1306,7 @@ namespace Client.Controls
                             return false;
                     }
 
-                    if (Item.Level >= Globals.AccessoryExperienceList.Count - (2 - (int)Item.Info.Rarity) * 2) return false;
+                    if (Item.Level >= Globals.AccessoryExperienceList.Count - (2 - (int)Item.Rarity) * 2) return false;
                     break;
                 case GridType.MasterRefineFragment1:
                     if ((Item.Flags & UserItemFlags.Marriage) == UserItemFlags.Marriage) return false;

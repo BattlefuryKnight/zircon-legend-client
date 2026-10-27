@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Drawing;
 using System.Windows.Forms;
 using Client.Controls;
@@ -564,7 +564,7 @@ namespace Client.Scenes.Views
                     Parent = ExpandPanel,
                     AutoSize = false,
                     Outline = true,
-                    ForeColour = drop.Item.Rarity == Rarity.Common ? Color.WhiteSmoke : (drop.Item.Rarity == Rarity.Superior ? Color.LightGreen : Color.Violet),
+                    ForeColour = ClientUserItem.GetRarityColour(drop.Item.Rarity) == Color.White ? Color.WhiteSmoke : ClientUserItem.GetRarityColour(drop.Item.Rarity),
                     Location = new Point(x, panel_height),
                     DrawFormat = TextFormatFlags.WordEllipsis,
                     Size = new Size(85, DXLabel.GetSize(label.Text, label.Font, label.OutlineWeight).Height),

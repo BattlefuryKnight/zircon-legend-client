@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
@@ -1835,11 +1835,21 @@ namespace Client.Scenes
             stats.Add(MouseItem.Info.Stats);
             stats.Add(MouseItem.AddedStats);
 
+            // 词条贡献的属性从基础属性展示中排除（仅保留词条描述行）
+            if (MouseItem.AffixStats != null)
+            {
+                foreach (KeyValuePair<Stat, int> affixPair in MouseItem.AffixStats.Values)
+                    stats[affixPair.Key] -= affixPair.Value;
+            }
+
+            // 悬浮框背景随稀有度变色：以稀有度颜色为基调的暗色底（凡兵=中性深蓝，其余为对应暗色调），保证文字可读
+            Color rarityBack = ClientUserItem.GetRarityColour(MouseItem.Rarity);
+
             ItemLabel = new DXControl
             {
-                BackColour = Color.FromArgb(200, 0, 24, 48),
+                BackColour = Color.FromArgb(200, 10 + rarityBack.R / 3, 10 + rarityBack.G / 3, 24 + rarityBack.B / 3),
                 Border = true,
-                BorderColour = Color.FromArgb(148, 148, 49), // Color.FromArgb(144, 148, 48),
+                BorderColour = Color.FromArgb(180, rarityBack.R, rarityBack.G, rarityBack.B),
                 DrawTexture = true,
                 IsControl = false,
                 IsVisible = true,
@@ -1856,7 +1866,7 @@ namespace Client.Scenes
                 ForeColour = Color.Yellow,
                 Location = new Point(4, 4),
                 Parent = ItemLabel,
-                Text = $"▼ {displayInfo.ItemName}" 
+                Text = string.IsNullOrEmpty(MouseItem.AffixName) ? $"▼ {displayInfo.ItemName}" : $"▼ {MouseItem.AffixName}"
             };
 
             if (MouseItem.Info.Effect == ItemEffect.ItemPart)
@@ -1872,19 +1882,19 @@ namespace Client.Scenes
             bool needSpacer = false;
 
 
-            if (displayInfo.Rarity > Rarity.Common || displayInfo.ItemType != ItemType.Nothing)
+            if (MouseItem.Rarity > Rarity.Common || displayInfo.ItemType != ItemType.Nothing)
             {
-                Type type2 = displayInfo.Rarity.GetType();
-                MemberInfo[] infos2 = type2.GetMember(displayInfo.Rarity.ToString());
+                Type type2 = MouseItem.Rarity.GetType();
+                MemberInfo[] infos2 = type2.GetMember(MouseItem.Rarity.ToString());
                 DescriptionAttribute description2 = infos2[0].GetCustomAttribute<DescriptionAttribute>();
                 string rarity = description2?.Description ?? "普通物品";
 
                 label = new DXLabel
                 {
-                    ForeColour = displayInfo.Rarity == Rarity.Common ? Color.White : (displayInfo.Rarity == Rarity.Superior ? Color.LightGreen : Color.Violet),
+                    ForeColour = ClientUserItem.GetRarityColour(MouseItem.Rarity),
                     Location = new Point(4, ItemLabel.DisplayArea.Bottom + 2),
                     Parent = ItemLabel,
-                    Text = displayInfo.Rarity > Rarity.Common ? $"{itemtype}{rarity}" : itemtype,
+                    Text = MouseItem.Rarity > Rarity.Common ? $"{itemtype}{rarity}" : itemtype,
                 };
 
                 ItemLabel.Size = new Size(label.DisplayArea.Right + 4 > ItemLabel.Size.Width ? label.DisplayArea.Right + 4 : ItemLabel.Size.Width,
@@ -1892,6 +1902,7 @@ namespace Client.Scenes
             }
 
             ItemLabel.Size = new Size(ItemLabel.Size.Width, ItemLabel.Size.Height + 15);
+
 
             if (needSpacer)
                 ItemLabel.Size = new Size(ItemLabel.Size.Width, ItemLabel.Size.Height + 4);
@@ -2109,7 +2120,7 @@ namespace Client.Scenes
             if (displayInfo.RequiredAmount > 0)
             {
                 string text;
-                Color colour = displayInfo.Rarity == Rarity.Common ? Color.White : Color.FromArgb(0, 204, 0);
+                Color colour = ClientUserItem.GetRarityColour(MouseItem.Rarity);
                 switch (displayInfo.RequiredType)
                 {
                     case RequiredType.Level:
@@ -2183,7 +2194,7 @@ namespace Client.Scenes
                 }
 
 
-                //if (displayInfo.Rarity > Rarity.Common)
+                //if (MouseItem.Rarity > Rarity.Common)
                 //    text += $" ({rarity})";
 
 
@@ -2568,17 +2579,25 @@ namespace Client.Scenes
                 displayInfo = Globals.ItemInfoList.Binding.First(x => x.Index == MouseItem.AddedStats[Stat.ItemIndex]);
 
             stats.Add(displayInfo.Stats, displayInfo.ItemType != ItemType.Weapon);
-            stats.Add(MouseItem.AddedStats, MouseItem.Info.ItemType != ItemType.Weapon);
+            // 基础属性展示中排除词条贡献的部分（词条效果仅以词条描述行展示）
+            Stats baseAdded = new Stats(MouseItem.AddedStats);
+            if (MouseItem.AffixStats != null)
+            {
+                foreach (KeyValuePair<Stat, int> affixPair in MouseItem.AffixStats.Values)
+                    baseAdded[affixPair.Key] -= affixPair.Value;
+            }
+
+            stats.Add(baseAdded, MouseItem.Info.ItemType != ItemType.Weapon);
             
             if (displayInfo.ItemType == ItemType.Weapon)
             {
-                Stat ele = MouseItem.AddedStats.GetWeaponElement();
+                Stat ele = baseAdded.GetWeaponElement();
 
                 if (ele == Stat.None)
                     ele = displayInfo.Stats.GetWeaponElement();
 
                 if (ele != Stat.None)
-                    stats[ele] += MouseItem.AddedStats.GetWeaponElementValue() + displayInfo.Stats.GetWeaponElementValue();
+                    stats[ele] += baseAdded.GetWeaponElementValue() + displayInfo.Stats.GetWeaponElementValue();
             }
 
             DXLabel label;
@@ -2604,7 +2623,7 @@ namespace Client.Scenes
 
                 if (text == null) continue;
 
-                string added = MouseItem.AddedStats.GetFormat(pair.Key);
+                string added = baseAdded.GetFormat(pair.Key);
 
                 label = new DXLabel
                 {
@@ -2652,7 +2671,7 @@ namespace Client.Scenes
                         firstele = true;
                         break;
                     default:
-                        if (MouseItem.AddedStats[pair.Key] == 0) break;
+                        if (baseAdded[pair.Key] == 0) break;
                         label.Text += $"   ({added})";
                         label.ForeColour = Color.FromArgb(148, 255, 206);
                         break;
@@ -2663,8 +2682,54 @@ namespace Client.Scenes
             }
             ItemLabel.Size = new Size(ItemLabel.Size.Width, ItemLabel.Size.Height + 5);
 
+            // ── 分割线：基础属性与词条分隔 ──
+            if (MouseItem.AffixTexts != null && MouseItem.AffixTexts.Count > 0)
+            {
+                label = new DXLabel
+                {
+                    ForeColour = Color.FromArgb(90, 90, 110),
+                    Location = new Point(4, ItemLabel.DisplayArea.Bottom),
+                    Parent = ItemLabel,
+                    Text = "────────────────────",
+                };
+
+                ItemLabel.Size = new Size(label.DisplayArea.Right + 4 > ItemLabel.Size.Width ? label.DisplayArea.Right + 4 : ItemLabel.Size.Width,
+                    label.DisplayArea.Bottom > ItemLabel.Size.Height ? label.DisplayArea.Bottom : ItemLabel.Size.Height);
+
+                // 词条描述（随机数值已代入当前装备的具体数值，金色显示）
+                foreach (string affixText in MouseItem.AffixTexts)
+                {
+                    if (string.IsNullOrEmpty(affixText)) continue;
+
+                    label = new DXLabel
+                    {
+                        ForeColour = Color.Gold,
+                        Location = new Point(4, ItemLabel.DisplayArea.Bottom),
+                        Parent = ItemLabel,
+                        Text = affixText,
+                    };
+
+                    ItemLabel.Size = new Size(label.DisplayArea.Right + 4 > ItemLabel.Size.Width ? label.DisplayArea.Right + 4 : ItemLabel.Size.Width,
+                        label.DisplayArea.Bottom > ItemLabel.Size.Height ? label.DisplayArea.Bottom : ItemLabel.Size.Height);
+                }
+
+                // ── 分割线：词条块下方与上方一致 ──
+                label = new DXLabel
+                {
+                    ForeColour = Color.FromArgb(90, 90, 110),
+                    Location = new Point(4, ItemLabel.DisplayArea.Bottom),
+                    Parent = ItemLabel,
+                    Text = "────────────────────",
+                };
+
+                ItemLabel.Size = new Size(label.DisplayArea.Right + 4 > ItemLabel.Size.Width ? label.DisplayArea.Right + 4 : ItemLabel.Size.Width,
+                    label.DisplayArea.Bottom > ItemLabel.Size.Height ? label.DisplayArea.Bottom : ItemLabel.Size.Height);
+
+                ItemLabel.Size = new Size(ItemLabel.Size.Width, ItemLabel.Size.Height + 5);
+            }
+
             int limit_level = Globals.WeaponExperienceList.Count;
-            limit_level -= (2 - (int)displayInfo.Rarity) * 3;
+            limit_level -= (2 - (int)MouseItem.Rarity) * 3;
 
             Type type = displayInfo.ItemType.GetType();
 

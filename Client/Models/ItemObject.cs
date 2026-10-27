@@ -48,7 +48,7 @@ namespace Client.Models
 
 
 
-            switch (itemInfo.Rarity)
+            switch (Item.Rarity)
             {
                 case Rarity.Common:
                     if (Item.AddedStats.Values.Count > 0 && Item.Info.Effect != ItemEffect.ItemPart)
@@ -125,7 +125,38 @@ namespace Client.Models
                         });
                     }
                     break;
-            }
+                            case Rarity.Famous:
+                case Rarity.Divine:
+                case Rarity.Heavenly:
+                    Color rareColour = ClientUserItem.GetRarityColour(Item.Rarity);
+
+                    if (Item.AddedStats.Values.Count > 0 && Item.Info.Effect != ItemEffect.ItemPart)
+                    {
+                        NameColour = rareColour;
+                        Effects.Add(new MirEffect(120, 10, TimeSpan.FromMilliseconds(100), LibraryFile.ProgUse, 60, 60, rareColour)
+                        {
+                            Target = this,
+                            Loop = true,
+                            Blend = true,
+                            BlendRate = 0.4F,
+                        });
+                    }
+                    else if (Item.Info.Effect == ItemEffect.ItemPart)
+                    {
+                        NameColour = Color.MediumOrchid;
+                    }
+                    else
+                    {
+                        NameColour = rareColour;
+                        Effects.Add(new MirEffect(120, 10, TimeSpan.FromMilliseconds(100), LibraryFile.ProgUse, 60, 60, rareColour)
+                        {
+                            Target = this,
+                            Loop = true,
+                            Blend = true,
+                            BlendRate = 0.2F,
+                        });
+                    }
+                    break;            }
 
             FilterSet = GameScene.Game?.BigPatchBox?.GetFilterItem(itemInfo.Index);
             if (FilterSet != null)

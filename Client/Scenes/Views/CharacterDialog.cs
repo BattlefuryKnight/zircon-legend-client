@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
@@ -1857,7 +1857,7 @@ namespace Client.Scenes.Views
                     library.Draw(index, DisplayArea.X + x, DisplayArea.Y + y, Color.White, true, 1F, ImageType.Image);
                     library.Draw(index, DisplayArea.X + x, DisplayArea.Y + y, Grid[(int)EquipmentSlot.Weapon].Item.Colour, true, 1F, ImageType.Overlay);
 
-                    if (Grid[(int)EquipmentSlot.Weapon].Item.Info.Rarity == Rarity.Elite && CEnvir.LibraryList.TryGetValue(LibraryFile.EquipEffect_UI, out var effectLibrary))
+                    if (Grid[(int)EquipmentSlot.Weapon].Item.Rarity == Rarity.Elite && CEnvir.LibraryList.TryGetValue(LibraryFile.EquipEffect_UI, out var effectLibrary))
                     {
                         MirImage image = null;
 

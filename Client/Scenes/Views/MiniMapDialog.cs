@@ -97,8 +97,7 @@ namespace Client.Scenes.Views
         }
 
         #region Methods
-
-        private void Image_Moving(object sender, System.Windows.Forms.MouseEventArgs e)
+private void Image_Moving(object sender, System.Windows.Forms.MouseEventArgs e)
         {
             int x = Image.Location.X;
 

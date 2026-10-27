@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
@@ -1620,7 +1620,7 @@ namespace Client.Envir
             int limit_level = Globals.WeaponExperienceList.Count;
             
             if (weapon != null)
-                limit_level -= (2 - (int)weapon.Info.Rarity) * 3;
+                limit_level -= (2 - (int)weapon.Rarity) * 3;
 
             bool refinable = false;
 
