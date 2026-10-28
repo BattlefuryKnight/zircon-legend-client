@@ -808,6 +808,7 @@ namespace Client.Envir
         }
         public void Process(S.MapChanged p)
         {
+            GameScene.Game.ClearAutoCounterTargets();
             GameScene.Game.MapControl.MapInfo = Globals.MapInfoList.Binding.FirstOrDefault(x => x.Index == p.MapIndex);
 
             MapObject.User.NameChanged();
@@ -823,6 +824,7 @@ namespace Client.Envir
         }
         public void Process(S.ObjectRemove p)
         {
+            GameScene.Game.RemoveAutoCounterTarget(p.ObjectID);
             if (p.ObjectID == GameScene.Game.NPCID)
                 GameScene.Game.NPCBox.Visible = false;
 
@@ -1091,6 +1093,12 @@ namespace Client.Envir
                 return;
             }
         }
+        public void Process(S.ObjectAttacked p)
+        {
+            if (MapObject.User == null || MapObject.User.ObjectID != p.ObjectID) return;
+
+            GameScene.Game.HandleAutoCounterAttack(p.AttackerID);
+        }
         public void Process(S.ObjectDash p)
         {
             
@@ -1217,7 +1225,14 @@ namespace Client.Envir
                 ob.ActionQueue.Add(new ObjectAction(MirAction.Die, p.Direction, p.Location));
 
                 if (ob == MapObject.User)
+                {
+                    GameScene.Game.ClearAutoCounterTargets();
                     GameScene.Game.ReceiveChat(MessageAction.Revive);
+                }
+                else
+                {
+                    GameScene.Game.RemoveAutoCounterTarget(p.ObjectID);
+                }
 
                 return;
             }

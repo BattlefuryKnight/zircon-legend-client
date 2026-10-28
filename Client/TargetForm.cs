@@ -40,7 +40,10 @@ namespace Client
         protected override void OnDeactivate(EventArgs e)
         {
             if (GameScene.Game != null)
+            {
                 GameScene.Game.MapControl.MapButtons = MouseButtons.None;
+                GameScene.Game.ResetAutoCounterMouseState();
+            }
 
             CEnvir.Shift = false;
             CEnvir.Alt = false;
@@ -68,6 +71,7 @@ namespace Client
         }
         protected override void OnMouseDown(MouseEventArgs e)
         {
+            GameScene.Game?.SuspendAutoCounterForMouse(e.Button);
             if (GameScene.Game != null && e.Button == MouseButtons.Right && (GameScene.Game.SelectedCell != null || GameScene.Game.GoldPickedUp))
             {
                 GameScene.Game.SelectedCell = null;
@@ -88,7 +92,10 @@ namespace Client
         {
 
             if (GameScene.Game != null)
+            {
                 GameScene.Game.MapControl.MapButtons &= ~e.Button;
+                GameScene.Game.ResumeAutoCounterForMouse(e.Button);
+            }
 
             try
             {

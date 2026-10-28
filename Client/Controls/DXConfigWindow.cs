@@ -31,7 +31,7 @@ namespace Client.Controls
 
         //Game 
         public DXTab GameTab;
-        private DXCheckBox ItemNameCheckBox, MonsterNameCheckBox, UserHealthCheckBox, MonsterHealthCheckBox, DamageNumbersCheckBox, EscapeCloseAllCheckBox, ShiftOpenChatCheckBox, RightClickDeTargetCheckBox, MonsterBoxVisibleCheckBox, LogChatCheckBox, DrawEffectsCheckBox;
+        private DXCheckBox ItemNameCheckBox, MonsterNameCheckBox, UserHealthCheckBox, MonsterHealthCheckBox, DamageNumbersCheckBox, EscapeCloseAllCheckBox, ShiftOpenChatCheckBox, RightClickDeTargetCheckBox, MonsterBoxVisibleCheckBox, LogChatCheckBox, DrawEffectsCheckBox, AutoCounterAttackCheckBox;
         public DXButton KeyBindButton;
 
         //Network
@@ -84,6 +84,7 @@ namespace Client.Controls
             MonsterBoxVisibleCheckBox.Checked = Config.MonsterBoxVisible;
             LogChatCheckBox.Checked = Config.LogChat;
             DrawEffectsCheckBox.Checked = Config.DrawEffects;
+            AutoCounterAttackCheckBox.Checked = Config.AutoCounterAttack;
 
             //LocalColourBox.BackColour = CEnvir.LocalTextColour;
             //GMWhisperInColourBox.BackColour = CEnvir.GMWhisperInTextColour;
@@ -460,6 +461,16 @@ namespace Client.Controls
             };
             DrawEffectsCheckBox.Location = new Point(270 - DrawEffectsCheckBox.Size.Width, 135);
 
+            AutoCounterAttackCheckBox = new DXCheckBox
+            {
+                bAlignRight = true,
+                AutoSize = true,
+                Text = "自动反击:",
+                Parent = GameTab,
+                Hint = "受到怪物攻击时自动锁定攻击者，击倒当前目标后继续攻击其他攻击者。"
+            };
+            AutoCounterAttackCheckBox.Location = new Point(120 - AutoCounterAttackCheckBox.Size.Width, 135);
+
             KeyBindButton = new DXButton
             {
                 Parent = GameTab,
@@ -646,6 +657,10 @@ namespace Client.Controls
             Config.MonsterBoxVisible = MonsterBoxVisibleCheckBox.Checked;
             Config.LogChat = LogChatCheckBox.Checked;
             Config.DrawEffects = DrawEffectsCheckBox.Checked;
+            Config.AutoCounterAttack = AutoCounterAttackCheckBox.Checked;
+
+            if (!Config.AutoCounterAttack && GameScene.Game != null)
+                GameScene.Game.ClearAutoCounterTargets();
 
             if (volumeChanged)
                 DXSoundManager.AdjustVolume();
@@ -906,6 +921,15 @@ namespace Client.Controls
                         LogChatCheckBox.Dispose();
 
                     LogChatCheckBox = null;
+
+                }
+
+                if (AutoCounterAttackCheckBox != null)
+                {
+                    if (!AutoCounterAttackCheckBox.IsDisposed)
+                        AutoCounterAttackCheckBox.Dispose();
+
+                    AutoCounterAttackCheckBox = null;
                 }
                 
 

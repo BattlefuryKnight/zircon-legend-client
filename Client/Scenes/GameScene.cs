@@ -114,6 +114,11 @@ namespace Client.Scenes
 
         public MapObject MagicObject, TargetObject, FocusObject;
         public MapObject MouseObject { get; set; }
+        private const int MaxAutoCounterAttackers = 10;
+        private readonly List<uint> AutoCounterAttackers = new List<uint>();
+        private uint AutoCounterTargetID;
+        private DateTime AutoCounterValidationTime;
+        private MouseButtons AutoCounterBlockingMouseButtons;
         public DXControl ItemLabel, MagicLabel;
         private DateTime skillTime1 { get; set; }
         private DateTime skillTime2 { get; set; }
@@ -1073,6 +1078,7 @@ namespace Client.Scenes
         public override void Process()
         {
             base.Process();
+            ProcessAutoCounterTarget();
 
             UpdateAttackModeTips();
             UpdatePetModeTips();
@@ -1091,7 +1097,7 @@ namespace Client.Scenes
 
             if (MouseControl == MapControl)
             {
-                if (CEnvir.Ctrl && MapObject.MouseObject?.Race == ObjectType.Item)
+                if (Config.ShowItemNames && CEnvir.Ctrl && MapObject.MouseObject?.Race == ObjectType.Item)
                     MouseItem = ((ItemObject) MapObject.MouseObject).Item;
                 else
                     MouseItem = null;
@@ -1866,11 +1872,11 @@ namespace Client.Scenes
 
             DXLabel label = new DXLabel
             {
-                ForeColour = Color.Yellow,
+                ForeColour = ClientUserItem.GetRarityColour(MouseItem.Rarity),
                 Font = new Font("宋体", CEnvir.FontSize(11F + (int)MouseItem.Rarity)), // 装备名字号：最低稀有度 11F，每提升一档稀有度 +1F
                 Location = new Point(4, 4),
                 Parent = ItemLabel,
-                Text = string.IsNullOrEmpty(MouseItem.AffixName) ? $"▼ {displayInfo.ItemName}" : $"▼ {MouseItem.AffixName}"
+                Text = string.IsNullOrEmpty(MouseItem.AffixName) ? $"{displayInfo.ItemName}" : $"{MouseItem.AffixName}"
             };
 
             if (MouseItem.Info.Effect == ItemEffect.ItemPart)
@@ -2610,12 +2616,13 @@ namespace Client.Scenes
                 label = new DXLabel
                 {
                     ForeColour = MouseItem.CurrentDurability == 0 ? Color.Red : Color.FromArgb(132, 255, 255),
-                    Location = new Point(ItemLabel.DisplayArea.Right, 4),
+                    Location = new Point(4, ItemLabel.DisplayArea.Bottom),
                     Parent = ItemLabel,
                     Text = $"持久: {Math.Round(MouseItem.CurrentDurability/1000M)}/{Math.Round(MouseItem.MaxDurability/1000M)}",
                 };
 
-                ItemLabel.Size = new Size(label.DisplayArea.Right + 4, ItemLabel.Size.Height);
+                ItemLabel.Size = new Size(label.DisplayArea.Right + 4 > ItemLabel.Size.Width ? label.DisplayArea.Right + 4 : ItemLabel.Size.Width,
+                    label.DisplayArea.Bottom > ItemLabel.Size.Height ? label.DisplayArea.Bottom : ItemLabel.Size.Height);
             }
 
             ItemLabel.Size = new Size(ItemLabel.Size.Width, ItemLabel.Size.Height + 5);
@@ -4528,6 +4535,169 @@ namespace Client.Scenes
                 default:
                     return false;
             }
+        }
+        private MonsterObject FindAutoCounterMonster(uint objectID)
+        {
+            foreach (MapObject ob in MapControl.Objects)
+            {
+                MonsterObject monster = ob as MonsterObject;
+                if (monster == null || monster.ObjectID != objectID) continue;
+
+                if (monster.Dead) return null;
+
+                return monster;
+            }
+
+            return null;
+        }
+        private bool CanAutoCounterAttackTarget(MonsterObject monster)
+        {
+            return monster != null && !monster.Dead && CanAttackTarget(monster);
+        }
+        private bool CanReachAutoCounterTarget(MonsterObject monster)
+        {
+            return CanAutoCounterAttackTarget(monster) && MapControl.CanReachTarget(monster);
+        }
+        private bool IsAutoCounterMouseBlocked
+        {
+            get
+            {
+                const MouseButtons blockingButtons = MouseButtons.Left | MouseButtons.Right;
+                return (AutoCounterBlockingMouseButtons & blockingButtons) != MouseButtons.None;
+            }
+        }
+        public void SuspendAutoCounterForMouse(MouseButtons button)
+        {
+            const MouseButtons blockingButtons = MouseButtons.Left | MouseButtons.Right;
+            button &= blockingButtons;
+            if (button == MouseButtons.None) return;
+
+            bool wasBlocked = IsAutoCounterMouseBlocked;
+            AutoCounterBlockingMouseButtons |= button;
+
+            if (!wasBlocked)
+                ClearAutoCounterTargets();
+        }
+        public void ResumeAutoCounterForMouse(MouseButtons button)
+        {
+            const MouseButtons blockingButtons = MouseButtons.Left | MouseButtons.Right;
+            AutoCounterBlockingMouseButtons &= ~(button & blockingButtons);
+        }
+        public void ResetAutoCounterMouseState()
+        {
+            AutoCounterBlockingMouseButtons = MouseButtons.None;
+        }
+        public bool IsAutoCounterTarget(MapObject ob)
+        {
+            return Config.AutoCounterAttack && !IsAutoCounterMouseBlocked && ob != null &&
+                   AutoCounterTargetID != 0 && ob.ObjectID == AutoCounterTargetID;
+        }
+        public void HandleAutoCounterAttack(uint attackerID)
+        {
+            if (!Config.AutoCounterAttack || IsAutoCounterMouseBlocked || User == null || User.Dead) return;
+
+            MonsterObject current = AutoCounterTargetID == 0 ? null : FindAutoCounterMonster(AutoCounterTargetID);
+            if (!CanAutoCounterAttackTarget(current) && AutoCounterTargetID != 0)
+                RemoveAutoCounterTarget(AutoCounterTargetID);
+
+            if (attackerID == AutoCounterTargetID) return;
+
+            MonsterObject attacker = FindAutoCounterMonster(attackerID);
+            if (!CanReachAutoCounterTarget(attacker)) return;
+
+            PruneAutoCounterAttackers();
+
+            if (!AutoCounterAttackers.Contains(attackerID))
+            {
+                if (AutoCounterAttackers.Count >= MaxAutoCounterAttackers) return;
+                AutoCounterAttackers.Add(attackerID);
+            }
+
+            if (AutoCounterTargetID == 0)
+                SelectNextAutoCounterTarget();
+        }
+        private void PruneAutoCounterAttackers()
+        {
+            for (int i = AutoCounterAttackers.Count - 1; i >= 0; i--)
+            {
+                MonsterObject monster = FindAutoCounterMonster(AutoCounterAttackers[i]);
+                if (!CanReachAutoCounterTarget(monster))
+                    AutoCounterAttackers.RemoveAt(i);
+            }
+        }
+        private void SelectNextAutoCounterTarget()
+        {
+            AutoCounterTargetID = 0;
+
+            while (AutoCounterAttackers.Count > 0)
+            {
+                uint objectID = AutoCounterAttackers[0];
+                AutoCounterAttackers.RemoveAt(0);
+
+                MonsterObject monster = FindAutoCounterMonster(objectID);
+                if (!CanReachAutoCounterTarget(monster)) continue;
+
+                AutoCounterTargetID = objectID;
+                TargetObject = monster;
+                FocusObject = monster;
+                return;
+            }
+        }
+        public void RemoveAutoCounterTarget(uint objectID)
+        {
+            AutoCounterAttackers.RemoveAll(x => x == objectID);
+
+            if (AutoCounterTargetID != objectID) return;
+
+            AutoCounterTargetID = 0;
+            if (TargetObject != null && TargetObject.ObjectID == objectID)
+                TargetObject = null;
+            if (FocusObject != null && FocusObject.ObjectID == objectID)
+                FocusObject = null;
+
+            SelectNextAutoCounterTarget();
+        }
+        public void ClearAutoCounterTargets()
+        {
+            AutoCounterAttackers.Clear();
+
+            if (AutoCounterTargetID == 0) return;
+
+            if (TargetObject != null && TargetObject.ObjectID == AutoCounterTargetID)
+                TargetObject = null;
+            if (FocusObject != null && FocusObject.ObjectID == AutoCounterTargetID)
+                FocusObject = null;
+
+            AutoCounterTargetID = 0;
+        }
+        private void ProcessAutoCounterTarget()
+        {
+            if (!Config.AutoCounterAttack || IsAutoCounterMouseBlocked || User == null || User.Dead || AutoCounterTargetID == 0) return;
+
+            MonsterObject monster = FindAutoCounterMonster(AutoCounterTargetID);
+            if (!CanAutoCounterAttackTarget(monster))
+            {
+                RemoveAutoCounterTarget(AutoCounterTargetID);
+                return;
+            }
+
+            if (CEnvir.Now >= AutoCounterValidationTime)
+            {
+                AutoCounterValidationTime = CEnvir.Now.AddSeconds(1);
+
+                if (!MapControl.CanReachTarget(monster))
+                {
+                    RemoveAutoCounterTarget(AutoCounterTargetID);
+                    return;
+                }
+
+                PruneAutoCounterAttackers();
+            }
+
+            if (TargetObject != monster)
+                TargetObject = monster;
+            if (FocusObject != monster)
+                FocusObject = monster;
         }
         protected override void OnAfterDraw()
         {

@@ -351,7 +351,7 @@ namespace Client.Scenes.Views
                 foreach (MapObject ob in Objects)
                     ob.DrawDamage();
 
-            if (MapLocation.X >= 0 && MapLocation.X < Width && MapLocation.Y >= 0 && MapLocation.Y < Height)
+            if (Config.ShowItemNames && MapLocation.X >= 0 && MapLocation.X < Width && MapLocation.Y >= 0 && MapLocation.Y < Height)
             {
                 Cell cell = Cells[MapLocation.X, MapLocation.Y];
                 int layer = 0;
@@ -1003,7 +1003,7 @@ namespace Client.Scenes.Views
                     AndroidProcess();
             }
             
-            if (MapObject.TargetObject != null && !MapObject.TargetObject.Dead && ((MapObject.TargetObject.Race == ObjectType.Monster && string.IsNullOrEmpty(MapObject.TargetObject.PetOwner)) || (CEnvir.Shift || Config.免SHIFT)))
+            if (MapObject.TargetObject != null && !MapObject.TargetObject.Dead && ((MapObject.TargetObject.Race == ObjectType.Monster && (string.IsNullOrEmpty(MapObject.TargetObject.PetOwner) || GameScene.Game.IsAutoCounterTarget(MapObject.TargetObject))) || (CEnvir.Shift || Config.免SHIFT)))
             {
                 //if (Functions.Distance(MapObject.TargetObject.CurrentLocation, MapObject.User.CurrentLocation) ==  1 && CEnvir.Now > User.AttackTime && User.Horse == HorseType.None)
                 //{
@@ -1353,7 +1353,7 @@ namespace Client.Scenes.Views
 
             if (MapObject.TargetObject == null || MapObject.TargetObject.Dead) return;
 
-            if ((MapObject.TargetObject.Race == ObjectType.Player || !string.IsNullOrEmpty(MapObject.TargetObject.PetOwner)) 
+            if ((MapObject.TargetObject.Race == ObjectType.Player || (!string.IsNullOrEmpty(MapObject.TargetObject.PetOwner) && !GameScene.Game.IsAutoCounterTarget(MapObject.TargetObject))) 
                 && (!CEnvir.Shift && !Config.免SHIFT)) 
                 return;
 
@@ -1366,7 +1366,15 @@ namespace Client.Scenes.Views
             {
                 best = DirectionBest(direction, 1, MapObject.TargetObject.CurrentLocation);
 
-                if (best != direction)
+                if (best == direction)
+                {
+                    if (GameScene.Game.IsAutoCounterTarget(MapObject.TargetObject))
+                    {
+                        GameScene.Game.RemoveAutoCounterTarget(MapObject.TargetObject.ObjectID);
+                        return;
+                    }
+                }
+                else
                 {
                     direction = best;
                 }
@@ -1877,6 +1885,7 @@ namespace Client.Scenes.Views
             if (nodeList != null && nodeList.Count > 0)
             {
                 CurrentPath = nodeList;
+                GameScene.Game.ClearAutoCounterTargets();
                 AutoPath = true;
             }
 
@@ -1891,6 +1900,38 @@ namespace Client.Scenes.Views
         public static bool CanAttackAction(MapObject target)
         {
             return target != null && !target.Dead && (target.Race == ObjectType.Monster && string.IsNullOrEmpty(target.PetOwner) || (CEnvir.Shift || Config.免SHIFT));
+        }
+        public bool CanReachTarget(MapObject target)
+        {
+            if (target == null || User == null) return false;
+
+            Point start = User.CurrentLocation;
+            Point destination = target.CurrentLocation;
+
+            if (Functions.InRange(start, destination, 1)) return true;
+
+            Queue<Point> pending = new Queue<Point>();
+            HashSet<Point> visited = new HashSet<Point> { start };
+            pending.Enqueue(start);
+            int inspected = 0;
+
+            while (pending.Count > 0 && inspected++ < 4096)
+            {
+                Point location = pending.Dequeue();
+
+                for (int i = 0; i < 8; i++)
+                {
+                    Point next = Functions.Move(location, (MirDirection)i);
+                    if (next.X < 0 || next.Y < 0 || next.X >= Width || next.Y >= Height) continue;
+                    if (!visited.Add(next)) continue;
+                    if (Functions.InRange(next, destination, 1)) return true;
+                    if (Cells[next.X, next.Y].Blocking()) continue;
+
+                    pending.Enqueue(next);
+                }
+            }
+
+            return false;
         }
 
         // ！ 新增：统一的AutoPath清除入口
