@@ -1867,6 +1867,7 @@ namespace Client.Scenes
             DXLabel label = new DXLabel
             {
                 ForeColour = Color.Yellow,
+                Font = new Font("宋体", CEnvir.FontSize(11F + (int)MouseItem.Rarity)), // 装备名字号：最低稀有度 11F，每提升一档稀有度 +1F
                 Location = new Point(4, 4),
                 Parent = ItemLabel,
                 Text = string.IsNullOrEmpty(MouseItem.AffixName) ? $"▼ {displayInfo.ItemName}" : $"▼ {MouseItem.AffixName}"
@@ -2685,28 +2686,22 @@ namespace Client.Scenes
             }
             ItemLabel.Size = new Size(ItemLabel.Size.Width, ItemLabel.Size.Height + 5);
 
-            // ── 分割线：基础属性与词条分隔 ──
             if (MouseItem.AffixTexts != null && MouseItem.AffixTexts.Count > 0)
             {
-                label = new DXLabel
+                // 词条描述（随机数值已代入当前装备的具体数值，按词条品质百分比独立着色）
+                for (int i = 0; i < MouseItem.AffixTexts.Count; i++)
                 {
-                    ForeColour = Color.FromArgb(90, 90, 110),
-                    Location = new Point(4, ItemLabel.DisplayArea.Bottom),
-                    Parent = ItemLabel,
-                    Text = "────────────────────",
-                };
-
-                ItemLabel.Size = new Size(label.DisplayArea.Right + 4 > ItemLabel.Size.Width ? label.DisplayArea.Right + 4 : ItemLabel.Size.Width,
-                    label.DisplayArea.Bottom > ItemLabel.Size.Height ? label.DisplayArea.Bottom : ItemLabel.Size.Height);
-
-                // 词条描述（随机数值已代入当前装备的具体数值，金色显示）
-                foreach (string affixText in MouseItem.AffixTexts)
-                {
+                    string affixText = MouseItem.AffixTexts[i];
                     if (string.IsNullOrEmpty(affixText)) continue;
+
+                    int rate = 100;
+                    if (MouseItem.AffixRates != null && i < MouseItem.AffixRates.Count)
+                        rate = MouseItem.AffixRates[i];
 
                     label = new DXLabel
                     {
-                        ForeColour = Color.Gold,
+                        ForeColour = GetAffixColour(rate),
+                        Font = new Font("宋体", CEnvir.FontSize(GetAffixFontSize(rate))), // 词条字号随品质联动：与颜色同档位，9F 起每档 +0.5F，最高 12F
                         Location = new Point(4, ItemLabel.DisplayArea.Bottom),
                         Parent = ItemLabel,
                         Text = affixText,
@@ -2715,18 +2710,6 @@ namespace Client.Scenes
                     ItemLabel.Size = new Size(label.DisplayArea.Right + 4 > ItemLabel.Size.Width ? label.DisplayArea.Right + 4 : ItemLabel.Size.Width,
                         label.DisplayArea.Bottom > ItemLabel.Size.Height ? label.DisplayArea.Bottom : ItemLabel.Size.Height);
                 }
-
-                // ── 分割线：词条块下方与上方一致 ──
-                label = new DXLabel
-                {
-                    ForeColour = Color.FromArgb(90, 90, 110),
-                    Location = new Point(4, ItemLabel.DisplayArea.Bottom),
-                    Parent = ItemLabel,
-                    Text = "────────────────────",
-                };
-
-                ItemLabel.Size = new Size(label.DisplayArea.Right + 4 > ItemLabel.Size.Width ? label.DisplayArea.Right + 4 : ItemLabel.Size.Width,
-                    label.DisplayArea.Bottom > ItemLabel.Size.Height ? label.DisplayArea.Bottom : ItemLabel.Size.Height);
 
                 ItemLabel.Size = new Size(ItemLabel.Size.Width, ItemLabel.Size.Height + 5);
             }
@@ -3039,6 +3022,33 @@ namespace Client.Scenes
             MagicLabel.Size = new Size(label.DisplayArea.Right + 4 > MagicLabel.Size.Width ? label.DisplayArea.Right + 4 : MagicLabel.Size.Width, label.DisplayArea.Bottom + 4);
             
 
+        }
+        /// <summary>
+        /// 词条品质颜色：<10 灰，10-19 绿，20-29 蓝，30-59 紫，60-79 黄，80-89 红，90 及以上暗金（默认金）。
+        /// </summary>
+        /// <summary>
+        /// 词条品质字号：<10 9F，10-19 9.5F，20-29 10F，30-59 10.5F，60-79 11F，80-89 11.5F，90 及以上 12F。
+        /// 档位与 GetAffixColour 保持一致。
+        /// </summary>
+        private static float GetAffixFontSize(int rate)
+        {
+            if (rate < 10) return 9F;
+            if (rate < 20) return 9.5F;
+            if (rate < 30) return 10F;
+            if (rate < 60) return 10.5F;
+            if (rate < 80) return 11F;
+            if (rate < 90) return 11.5F;
+            return 12F;
+        }
+        private static Color GetAffixColour(int rate)
+        {
+            if (rate < 10) return Color.Gray;
+            if (rate < 20) return Color.Lime;
+            if (rate < 30) return Color.DodgerBlue;
+            if (rate < 60) return Color.MediumPurple;
+            if (rate < 80) return Color.Yellow;
+            if (rate < 90) return Color.Red;
+            return Color.Gold;
         }
         private void SetItemInfo(SetInfo set)
         {

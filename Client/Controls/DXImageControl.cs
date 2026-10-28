@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using System.Drawing;
+using SlimDX.Direct3D9;
 using Client.Envir;
 using Library;
 
@@ -213,6 +214,13 @@ namespace Client.Controls
 
         #endregion
 
+        #region ExternalTexture
+
+        /// <summary>外部纹理（如从文件加载的自定义 buff 图标）；非空时优先绘制该纹理</summary>
+        public Texture ExternalTexture { get; set; }
+
+        #endregion
+
         public override Size Size
         {
             get
@@ -246,6 +254,26 @@ namespace Client.Controls
         }
         protected virtual void DrawMirTexture()
         {
+            if (ExternalTexture != null)
+            {
+                bool blendState = DXManager.Blending;
+                float blendRate = DXManager.BlendRate;
+
+                if (Blend)
+                    DXManager.SetBlend(true, ImageOpacity);
+                else
+                    DXManager.SetOpacity(ImageOpacity);
+
+                PresentTexture(ExternalTexture, Parent, DisplayArea, IsEnabled ? ForeColour : Color.FromArgb(75, 75, 75), this);
+
+                if (Blend)
+                    DXManager.SetBlend(blendState, blendRate);
+                else
+                    DXManager.SetOpacity(1F);
+
+                return;
+            }
+
             bool oldBlend = DXManager.Blending;
             float oldRate = DXManager.BlendRate;
 

@@ -1,5 +1,7 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Net;
 using System.Drawing;
 using System.Linq;
 using Client.Controls;
@@ -8,6 +10,7 @@ using Client.Models;
 using Client.UserModels;
 using Library;
 using Library.SystemModels;
+using SlimDX.Direct3D9;
 
 //Cleaned
 namespace Client.Scenes.Views
@@ -16,6 +19,9 @@ namespace Client.Scenes.Views
     {
         #region Properties
         private Dictionary<ClientBuffInfo, DXImageControl> Icons = new Dictionary<ClientBuffInfo, DXImageControl>();
+        private Dictionary<ClientBuffInfo, DXLabel> Labels = new Dictionary<ClientBuffInfo, DXLabel>();
+        private readonly HashSet<string> _pendingIconRefreshes = new HashSet<string>();
+        private static readonly Dictionary<string, Texture> BuffIconCache = new Dictionary<string, Texture>();
 
         public override WindowType Type => WindowType.BuffBox;
         public override bool CustomSize => false;
@@ -201,6 +207,20 @@ namespace Client.Scenes.Views
                         icon.Index = 241;
                         break;
 
+                    case BuffType.AffixTrigger:
+                        icon.Index = 73; // 默认 buff 图标
+                        if (!string.IsNullOrEmpty(buff.BuffIcon))
+                        {
+                            string local = GetLocalBuffIconPath(buff.BuffIcon);
+                            if (local != null)
+                                icon.ExternalTexture = LoadBuffIconTexture(local);
+                            else
+                            {
+                                _pendingIconRefreshes.Add(buff.BuffIcon);
+                                DownloadBuffIcon(buff.BuffIcon);
+                            }
+                        }
+                        break;
                     case BuffType.ItemBuffPermanent:
                         icon.Index = 81;
                         break;
@@ -226,6 +246,16 @@ namespace Client.Scenes.Views
                     if (MouseControl == icon)
                         icon.Hint = GetBuffHint(buff);
                 };
+
+                Labels[buff] = new DXLabel
+                {
+                    Parent = icon,
+                    Text = GetBuffTimeText(buff.RemainingTime),
+                    Font = new System.Drawing.Font("宋体", CEnvir.FontSize(8F), FontStyle.Bold),
+                    ForeColour = Color.White,
+                    IsControl = false,
+                    Location = new Point(2, icon.Size.Height - (int)CEnvir.FontSize(10F)),
+                };
             }
 
             for (int i = 0; i < buffs.Count; i++)
@@ -234,6 +264,59 @@ namespace Client.Scenes.Views
             Size = new Size(3 + Math.Min(6, Math.Max(1, Icons.Count))*27, 3 + Math.Max(1, 1 +  (Icons.Count - 1)/6) * 27);
             
         }
+        private static string GetLocalBuffIconPath(string iconName)
+        {
+            if (string.IsNullOrEmpty(iconName)) return null;
+            string file = Path.Combine(Environment.CurrentDirectory, "Data", "Bufficons", iconName);
+            return File.Exists(file) ? file : null;
+        }
+
+        private static Texture LoadBuffIconTexture(string file)
+        {
+            if (BuffIconCache.TryGetValue(file, out Texture cached)) return cached;
+
+            try
+            {
+                Texture texture = Texture.FromFile(DXManager.Device, file);
+                BuffIconCache[file] = texture;
+                return texture;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private static void DownloadBuffIcon(string iconName)
+        {
+            try
+            {
+                string dir = Path.Combine(Environment.CurrentDirectory, "Data", "Bufficons");
+                Directory.CreateDirectory(dir);
+
+                string url = $"http://{Config.IPAddress}:{Config.WebPort}/bufficons/{iconName}";
+
+                WebClient client = new WebClient();
+                client.DownloadFileCompleted += (s, e) =>
+                {
+                    client.Dispose();
+                };
+                client.DownloadFileAsync(new Uri(url), Path.Combine(dir, iconName));
+            }
+            catch
+            {
+                // 下载失败时保持默认图标，下次触发时重试
+            }
+        }
+
+        private static string GetBuffTimeText(TimeSpan remaining)
+        {
+            if (remaining == TimeSpan.MaxValue) return string.Empty;
+            double total = Math.Ceiling(remaining.TotalSeconds);
+            if (total <= 0) return string.Empty;
+            return total.ToString();
+        }
+
         private string GetBuffHint(ClientBuffInfo buff)
         {
             string text = string.Empty;
@@ -408,6 +491,25 @@ namespace Client.Scenes.Views
         {
             base.Process();
 
+            // 更新倒计时标签
+            foreach (KeyValuePair<ClientBuffInfo, DXLabel> pair in Labels)
+                pair.Value.Text = GetBuffTimeText(pair.Key.RemainingTime);
+
+            // 图标下载完成 → 重建 buff 列表
+            if (_pendingIconRefreshes.Count > 0)
+            {
+                bool anyReady = false;
+                foreach (string name in _pendingIconRefreshes)
+                {
+                    if (File.Exists(GetLocalBuffIconPath(name))) { anyReady = true; break; }
+                }
+                if (anyReady)
+                {
+                    _pendingIconRefreshes.Clear();
+                    BuffsChanged();
+                }
+            }
+
             foreach (KeyValuePair<ClientBuffInfo, DXImageControl> pair in Icons)
             {
                 if (pair.Key.Pause)
@@ -450,6 +552,14 @@ namespace Client.Scenes.Views
 
                     pair.Value.Dispose();
                 }
+
+                foreach (KeyValuePair<ClientBuffInfo, DXLabel> pair in Labels)
+                {
+                    if (pair.Value == null || pair.Value.IsDisposed) continue;
+                    pair.Value.Dispose();
+                }
+                Labels.Clear();
+                Labels = null;
 
                 Icons.Clear();
                 Icons = null;
